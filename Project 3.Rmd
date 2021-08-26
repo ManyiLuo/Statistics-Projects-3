@@ -1,0 +1,178 @@
+---
+title: "STA302 Assignment 3"
+author: "Manyi Luo - 1003799419"
+date: "2019/11/29"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+#Solution
+
+Question 1.
+```{r, echo = FALSE}
+reale <- read.csv("/Users/meow/Desktop/STA302/A3/reale_a3data.csv")
+reale_manyi = subset(reale,!is.na(reale$lotwidth) & !is.na(reale$lotlength) & !is.na(reale$taxes))
+reale_manyi$lotsize = reale_manyi$lotwidth * reale_manyi$lotlength
+str(reale_manyi)
+```
+
+```{r, echo = FALSE}
+reale_manyi_quant = reale_manyi[,c(2:9, 11)]
+str(reale_manyi_quant)
+```
+
+```{r, echo = FALSE}
+manyi.cor <- function(x, y, digits = 4, prefix = "", cex.cor, ...){
+  usr <- par("usr");
+  on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  txt1 <- format(cor(x,y), digits = digits)
+  text(0.5, 0.5, paste(txt1), cex = 0.6)
+  }
+pairs(~ Sale + list + bedrooms + bathrooms + lotwidth + lotlength + maxsqfoot + taxes + lotsize, data = reale_manyi_quant, lower.panel = manyi.cor, cex = 0.6, pch = 20, bg = "yellow", cex.labels = 0.7, font.labels = 0.7, upper.panel = panel.smooth)
+```
+
+From the pairwise correlation and scattor plot, we can see that the sale price has the highest correlation with list. The rank of all quantitative predictors' correlation coefficients with sale price are presented below (from highest to lowest):
+```
+1. list: r = 0.9759
+2. taxes: r = 0.8125
+3. maxsqfoot: r = 0.7543
+4. bathrooms: r = 0.6655
+5. lotsize: r = 0.5109
+6. lotwidth: r = 0.4466
+7. bedrooms: r = 0.4181
+8. lotlegth: r = 0.4181
+```
+
+Question 2.
+
+(i).
+Refering back to the matrix in question 1, predictor lotlength may violate the assumption of constant variance. From the standardized residual plot presented below, the pattern of residual's variance is not randomly distributed. Its distribution is concentrated around 120000 (foot) and a trend of increasing variance can be identified when sale price is higher.
+
+(ii).
+```{r, echo = FALSE}
+model1_manyi <- lm(reale_manyi$Sale ~ reale_manyi$lotlength)
+summary(model1_manyi)
+plot(model1_manyi, 1, main = "9419")
+```
+
+(iii). In order to conquer this problem, we can apply transformation to predictor or or weighted least square method to solve the unequal variance.
+
+Question 3.
+
+(i).
+```{r, echo = FALSE}
+model2_manyi <- lm(reale_manyi$Sale ~ reale_manyi$list + reale_manyi$bedrooms + reale_manyi$bathrooms + reale_manyi$lotwidth + reale_manyi$lotlength + reale_manyi$maxsqfoot + reale_manyi$taxes + as.factor(reale_manyi$location) + reale_manyi$lotsize)
+summary(model2_manyi)
+```
+
+(ii).
+The estimated regression coefficients (Estimate) and the p-values (Pr(>|t|)) for the corresponding t-tests for these coefficients are listed below:
+```
+1. list: Estimate = 0.7568; Pr(>|t|) = < 2 * 10^-16 ***
+
+2. bedrooms: Estimate = 9108; Pr(>|t|) = 0.38648
+
+3. bathrooms: Estimate = 9594; Pr(>|t|) = 0.43660
+
+4. lotwidth: Estimate = -409.2; Pr(>|t|) = 0.70037
+
+5. lotlength: Estimate = -111.9; Pr(>|t|) = 0.83829
+
+6. maxsqfoot: Estimate = 3.898; Pr(>|t|) = 0.78617
+
+7. taxes: Estimate = 14.50; Pr(>|t|) = 0.00235 **
+
+8. locationX: Estimate = -1086; Pr(>|t|) = 0.94642
+
+9. lotsize: Estimate = 7.988; Pr(>|t|) = 0.30976
+```
+
+(iii).
+We can see that the p value of variable list and variable tax are significant, since they are less than 0.05. Their estimated regression coefficients can be interpreted as: holding all other variables constant, one unit (dollar) increase in list (price) is associated with 0.7568 units (dollars) increase in sale price; and one unit (dollar) increase in tax is associated with 14.50 units (dollars) increase in sale price.
+
+Question 4.
+
+(i).
+```{r, echo = FALSE}
+reale$lotsize = reale$lotwidth * reale$lotlength
+model3_manyi <- lm(reale$Sale ~ reale$list + reale$bedrooms + reale$bathrooms + reale$lotwidth + reale$lotlength + reale$maxsqfoot + reale$taxes + as.factor(reale$location) + reale$lotsize)
+par(mfrow=c(2,2))
+plot(model3_manyi, main = "9419")
+```
+
+```{r, echo = FALSE}
+plot(model3_manyi, 4, main = "9419")
+```
+
+(ii). The Case ID's that may be considered as influential are: 55, 63, 150.
+
+(iii).
+A point is considered as influential point if its cook distance is greater than 4/(n-k-1). In this case, the threshold value is 4/(162-9-1) = 0.026. There are 3 points with cook distance greater than 0.5 and their case_id are 53, 61, 147 respectively. Case 53 and 147 have cook distance at around 0.5 and case 61 has cook distance higher than 0.5 (around 0.65). 
+
+Question 5.
+```{r, echo = FALSE}
+step(model2_manyi, direction = "backward")
+```
+
+(i). By using coefficients obtained above, the final fitted model is $\hat {Sale} = 71160 + list * 0.7609 + bathrooms * 15910 + taxes * 14.34 + lotsize * 5.750$. 
+
+(ii). No, the results are inconsistent with what we derived in question 3. The final model eliminates some explanatory variables comparing to the full model in question 3, for example: bedrooms, lotwidth, lotlength etc. We are using backward AIC to select model and the model with smaller AIC is more prefered than larger AIC. Therefore, when we are removing factors from the full model, we will keep eliminating if AIC keeps decreasing.
+
+Question 6.
+```{r, echo = FALSE}
+step(model2_manyi, direction = "backward", k=log(162))
+```
+
+(i).
+Similarly, by using coefficients obtained above, the final model is $\hat {Sale} = 116700 + list * 0.7957 + taxes * 16.26$. 
+
+(ii). 
+In this case, the results are inconsistent with question 3 and question 5. In the removing process, BIC is more strict (heavy penalty) in choosing variables comparing to AIC, which makes the results different. Therefore, question 6 produces a final fitted model with less variables, since more predictors are dropped during the process.
+
+#Appendix
+
+```
+Q1
+reale <- read.csv("/Users/meow/Desktop/STA302/A3/reale_a3data.csv")
+reale_manyi = subset(reale,!is.na(reale$lotwidth) & !is.na(reale$lotlength) & !is.na(reale$taxes))
+reale_manyi$lotsize = reale_manyi$lotwidth * reale_manyi$lotlength
+str(reale_manyi)
+
+reale_manyi_quant = reale_manyi[,c(2:9, 11)]
+str(reale_manyi_quant)
+
+manyi.cor <- function(x, y, digits = 4, prefix = "", cex.cor, ...){
+  usr <- par("usr");
+  on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  txt1 <- format(cor(x,y), digits = digits)
+  text(0.5, 0.5, paste(txt1), cex = 0.6)
+  }
+pairs(~ Sale + list + bedrooms + bathrooms + lotwidth + lotlength + maxsqfoot + taxes + lotsize, data = reale_manyi_quant, lower.panel = manyi.cor, cex = 0.6, pch = 20, bg = "yellow", cex.labels = 0.7, font.labels = 0.7, upper.panel = panel.smooth)
+
+Q2
+model1_manyi <- lm(reale_manyi$Sale ~ reale_manyi$lotlength)
+summary(model1_manyi)
+plot(model1_manyi, 1)
+
+Q3
+model2_manyi <- lm(reale_manyi$Sale ~ reale_manyi$list + reale_manyi$bedrooms + reale_manyi$bathrooms + reale_manyi$lotwidth + reale_manyi$lotlength + reale_manyi$maxsqfoot + reale_manyi$taxes + as.factor(reale_manyi$location) + reale_manyi$lotsize)
+summary(model2_manyi)
+
+Q4
+reale$lotsize = reale$lotwidth * reale$lotlength
+model3_manyi <- lm(reale$Sale ~ reale$list + reale$bedrooms + reale$bathrooms + reale$lotwidth + reale$lotlength + reale$maxsqfoot + reale$taxes + as.factor(reale$location) + reale$lotsize)
+par(mfrow=c(2,2))
+plot(model3_manyi)
+plot(model3_manyi, 4)
+
+Q5
+step(model2_manyi,direction = "backward")
+
+Q6
+step(model2_manyi, direction = "backward", k=log(162))
+```
+
+
